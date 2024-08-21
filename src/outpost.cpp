@@ -21,15 +21,25 @@ along with Yottagram. If not, see <http://www.gnu.org/licenses/>.
 #include <QtQuick>
 #include <sailfishapp.h>
 #include "apiclient.h"
+#include "parcellist.h"
+#include "QZXing.h"
 
 int main(int argc, char *argv[])
 {
     QScopedPointer<QGuiApplication> app(SailfishApp::application(argc, argv));
     QSharedPointer<QQuickView> view(SailfishApp::createView());
 
+    QZXing::registerQMLTypes();
+    QZXing::registerQMLImageProvider(*view->engine());
+
     ApiClient client;
+    ParcelList parcelList(&client);
 
     view->rootContext()->setContextProperty("api", &client);
+    view->rootContext()->setContextProperty("parcelList", &parcelList);
+
+    qmlRegisterType<ParcelList>("com.verdanditeam.outpost", 1, 0, "ParcelList");
+
 
     view->setSource(SailfishApp::pathTo("qml/outpost.qml"));
     view->show();

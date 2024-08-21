@@ -22,6 +22,7 @@ along with Yottagram. If not, see <http://www.gnu.org/licenses/>.
 #define APICLIENT_H
 
 #include <QObject>
+#include <nlohmann/json.hpp>
 
 static const std::string PHONE_OS = "Android";
 
@@ -30,6 +31,18 @@ class ApiClient : public QObject
     Q_OBJECT
     Q_PROPERTY(bool needsAuthorization READ getNeedsAuthorization NOTIFY needsAuthorizationChanged)
 public:
+    enum ParcelListType {
+        Pending,
+        Tracked,
+        Sent,
+        Returns
+    };
+
+    enum RequestType {
+        GET,
+        POST,
+        DELETE
+    };
 
     explicit ApiClient(QObject *parent = nullptr);
 
@@ -37,6 +50,13 @@ public:
 
     Q_INVOKABLE void sendNumber(QString number);
     Q_INVOKABLE void sendCode(QString code);
+    Q_INVOKABLE void logout();
+    Q_INVOKABLE void track(QString number);
+    Q_INVOKABLE void stopTracking(QString number);
+    nlohmann::json getParcels(ParcelListType parcelType);
+
+private:
+    nlohmann::json request(std::string url, std::string body, RequestType type, bool withAuth);
 
 signals:
     void error(QString message);
@@ -44,6 +64,10 @@ signals:
     void waitingForCode();
     void authorized();
     void needsAuthorizationChanged();
+    void refresh();
+
+private:
+    bool refreshToken();
 
 private:
     QString _phoneNumber;

@@ -1,6 +1,6 @@
 Name:       outpost
-Summary:    Inpost client
-Version:    0.1
+Summary:    InPost client
+Version:    1.2
 Release:    1
 License:    LICENSE
 URL:        http://example.org/
@@ -17,8 +17,7 @@ BuildRequires:  openssl-devel
 BuildRequires:  git
 
 %description
-Short description of my Sailfish OS Application
-
+Unofficial InPost client
 
 %prep
 %setup -q -n %{name}-%{version}

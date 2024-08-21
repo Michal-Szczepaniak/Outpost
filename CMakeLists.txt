@@ -7,6 +7,7 @@ include(FindPkgConfig)
 pkg_search_module(SAILFISH sailfishapp REQUIRED)
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -15,9 +16,14 @@ set(BUILD_SHARED_LIBS OFF)
 add_subdirectory(cpr)
 add_subdirectory(json)
 
+SET(QZXING_USE_QML ON)
+set(QZXING_USE_ENCODER ON)
+add_subdirectory(qzxing/src)
+
 FILE(GLOB SRC "src/*.cpp" "src/*.h")
 add_executable(outpost
     ${SRC}
+    qml/resources/resources.qrc
 )
 target_compile_definitions(outpost PRIVATE
     $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>
@@ -30,6 +36,7 @@ target_link_libraries(outpost
     PUBLIC
     Qt5::Quick
     ${SAILFISH_LDFLAGS}
+    qzxing
     PRIVATE
     cpr::cpr
     nlohmann_json::nlohmann_json
@@ -69,6 +76,7 @@ add_custom_target(distfiles
         qml/outpost.qml
         qml/cover/CoverPage.qml
         qml/pages/Main.qml
+        qml/pages/About.qml
         qml/pages/PhoneNumberDialog.qml
         qml/pages/AuthorizationCodeDialog.qml
         rpm/outpost.spec

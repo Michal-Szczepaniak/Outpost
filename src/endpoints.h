@@ -25,11 +25,15 @@ along with Yottagram. If not, see <http://www.gnu.org/licenses/>.
 
 namespace Endpoints {
 
-static const std::string SMS_SEND_CODE = "https://api-inmobile-pl.easypack24.net/v1/sendSMSCode/";
-static const std::string SMS_CONFIRM_CODE = "https://api-inmobile-pl.easypack24.net/v1/confirmSMSCode/";
+static const std::string SMS_SEND_CODE = "https://api-inmobile-pl.easypack24.net/v1/account";
+static const std::string SMS_CONFIRM_CODE = "https://api-inmobile-pl.easypack24.net/v1/account/verification";
 static const std::string REFRESH_TOKEN = "https://api-inmobile-pl.easypack24.net/v1/authenticate";
-static const std::string PARCELS = "https://api-inmobile-pl.easypack24.net/v3/parcels/tracked";
+static const std::string LOGOUT = "https://api-inmobile-pl.easypack24.net/v1/logout";
+static const std::string PARCELS = "https://api-inmobile-pl.easypack24.net/v4/parcels/tracked";
+static const std::string SENT = "https://api-inmobile-pl.easypack24.net/v2/parcels/sent";
+static const std::string RETURNS = "https://api-inmobile-pl.easypack24.net/v1/returns/parcels";
 static const std::string COMPARTMENT_OPEN = "https://api-inmobile-pl.easypack24.net/v1/collect/compartment/open";
+static const std::string OBSERVED_PARCEL = "https://api-inmobile-pl.easypack24.net/v1/observedParcel";
 
 }
 

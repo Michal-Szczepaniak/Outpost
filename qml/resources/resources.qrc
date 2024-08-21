@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/icon-m-parcel-locker-a-var.svg</file>
+        <file>images/icon-m-parcel-locker-b-var.svg</file>
+        <file>images/icon-m-parcel-locker-c-var.svg</file>
+        <file>images/icon-m-parcel-locker-o-var.svg</file>
+    </qresource>
+</RCC>
