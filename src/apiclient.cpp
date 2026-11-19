@@ -18,10 +18,14 @@ along with Yottagram. If not, see <http://www.gnu.org/licenses/>.
 
 */
 
+#include <QCryptographicHash>
 #include <QDebug>
 #include <QSettings>
 #include <QString>
+#include <QUrl>
+#include <QUrlQuery>
 #include <cpr/cpr.h>
+#include <random>
 #include "apiclient.h"
 #include "endpoints.h"
 
@@ -39,47 +43,83 @@ bool ApiClient::getNeedsAuthorization()
     return _authToken == "" || _refreshToken == "";
 }
 
-void ApiClient::sendNumber(QString number)
+QByteArray ApiClient::randomUrlSafeString(int bytes)
 {
-    nlohmann::json payload;
+    std::random_device random;
+    QByteArray data;
 
-    _phoneNumber = number;
-    payload["phoneNumber"]["prefix"] = "+48";
-    payload["phoneNumber"]["value"] = _phoneNumber.toStdString();
-
-    nlohmann::json response = request(Endpoints::SMS_SEND_CODE, payload.dump(), POST, false);
-
-    if (response.is_discarded()) {
-        emit waitingForCode();
-    } else {
-        emit error(tr("Error sending phone number"));
+    for (int i = 0; i < bytes; i++) {
+        data.append(static_cast<char>(random() & 0xFF));
     }
+
+    return data.toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
 }
 
-void ApiClient::sendCode(QString code)
+QString ApiClient::authorizeUrl()
 {
-    nlohmann::json payload;
-    payload["smsCode"] = code.toStdString();
-    payload["devicePlatform"] = PHONE_OS;
-    payload["phoneNumber"]["prefix"] = "+48";
-    payload["phoneNumber"]["value"] = _phoneNumber.toStdString();
+    _codeVerifier = randomUrlSafeString(32);
+    _state = randomUrlSafeString(16);
+    QByteArray codeChallenge = QCryptographicHash::hash(_codeVerifier, QCryptographicHash::Sha256).toBase64(QByteArray::Base64UrlEncoding | QByteArray::OmitTrailingEquals);
 
-    nlohmann::json response = request(Endpoints::SMS_CONFIRM_CODE, payload.dump(), POST, false);
+    QUrlQuery query;
+    query.addQueryItem("client_id", "inpost-mobile");
+    query.addQueryItem("response_type", "code");
+    query.addQueryItem("redirect_uri", QString::fromStdString(Endpoints::AUTHORIZE_REDIRECT));
+    query.addQueryItem("scope", "openid");
+    query.addQueryItem("code_challenge", codeChallenge);
+    query.addQueryItem("code_challenge_method", "S256");
+    query.addQueryItem("nonce", randomUrlSafeString(16));
+    query.addQueryItem("state", _state);
 
-    if (!response.empty() && !response.is_discarded()) {
-        _authToken = QString::fromStdString(response["authToken"]);
-        _refreshToken = QString::fromStdString(response["refreshToken"]);
+    QUrl url(QString::fromStdString(Endpoints::AUTHORIZE_URL));
+    url.setQuery(query);
 
-        QSettings settings;
-        settings.setValue("phoneNumber", _phoneNumber);
-        settings.setValue("authToken", _authToken);
-        settings.setValue("refreshToken", _refreshToken);
+    qDebug() << url.toString(QUrl::FullyEncoded);
 
-        emit needsAuthorizationChanged();
-        emit authorized();
-    } else {
-        emit error(tr("Error sending code"));
+    return url.toString(QUrl::FullyEncoded);
+}
+
+void ApiClient::handleCallback(QString callbackUrl)
+{
+    if (_codeVerifier.isEmpty()) return;
+
+    QUrlQuery query(QUrl(callbackUrl).query());
+    QString code = query.queryItemValue("code");
+    QString state = query.queryItemValue("state");
+
+    if (code.isEmpty() || state.toUtf8() != _state) {
+        emit error(tr("Login failed"));
+        return;
     }
+
+    cpr::Response r = cpr::Post(cpr::Url{Endpoints::OAUTH_TOKEN},
+                                cpr::Payload{{"client_id", "inpost-mobile"},
+                                             {"grant_type", "authorization_code"},
+                                             {"redirect_uri", Endpoints::AUTHORIZE_REDIRECT},
+                                             {"code_verifier", _codeVerifier.toStdString()},
+                                             {"code", code.toStdString()}},
+                                cpr::Header{{"User-Agent", "InPost-Mobile/4.23.0(42300002) (Android 9; unknown; unknown unknown; en)"}});
+
+    _codeVerifier.clear();
+    _state.clear();
+
+    qDebug() << "Token status code: " << r.status_code << QString::fromStdString(r.text);
+
+    nlohmann::json data = nlohmann::json::parse(r.text, nullptr, false);
+    if (r.status_code != 200 || data.is_discarded() || !data.contains("access_token") || !data.contains("refresh_token")) {
+        emit error(tr("Login failed"));
+        return;
+    }
+
+    _authToken = QString::fromStdString(data["access_token"].get<std::string>());
+    _refreshToken = QString::fromStdString(data["refresh_token"].get<std::string>());
+
+    QSettings settings;
+    settings.setValue("authToken", _authToken);
+    settings.setValue("refreshToken", _refreshToken);
+
+    emit needsAuthorizationChanged();
+    emit authorized();
 }
 
 void ApiClient::logout()
@@ -147,9 +187,9 @@ nlohmann::json ApiClient::request(std::string url, std::string body, RequestType
         cpr::Response r;
         cpr::Header header;
         header["Content-Type"] = "application/json; charset=UTF-8";
-        header["User-Agent"] = "InPost-Mobile/3.23.0(32300001) (Android 9; unknown; unknown unknown; en)";
+        header["User-Agent"] = "InPost-Mobile/4.23.0(42300002) (Android 9; unknown; unknown unknown; en)";
         if (withAuth)
-            header["Authorization"] = _authToken.toStdString();
+            header["Authorization"] = "Bearer " + _authToken.toStdString();
 
         switch (type) {
         case GET:
@@ -196,27 +236,37 @@ nlohmann::json ApiClient::request(std::string url, std::string body, RequestType
 
 bool ApiClient::refreshToken()
 {
-    nlohmann::json payload;
-    payload["refreshToken"] = _refreshToken.toStdString();
-    payload["phoneOS"] = PHONE_OS;
+    cpr::Response r = cpr::Post(cpr::Url{Endpoints::OAUTH_TOKEN},
+                                cpr::Payload{{"client_id", "inpost-mobile"},
+                                             {"grant_type", "refresh_token"},
+                                             {"refresh_token", _refreshToken.toStdString()}},
+                                cpr::Header{{"User-Agent", "InPost-Mobile/4.23.0(42300002) (Android 9; unknown; unknown unknown; en)"}});
 
-    cpr::Response r = cpr::Post(cpr::Url{Endpoints::REFRESH_TOKEN},
-                  cpr::Body{payload.dump()},
-                  cpr::Header{{"Content-Type", "application/json"}} );
+    qDebug() << "Refresh status code: " << r.status_code;
 
-    if (r.status_code == 200) {
-        nlohmann::json data = nlohmann::json::parse(r.text);
+    nlohmann::json data = nlohmann::json::parse(r.text, nullptr, false);
 
-        if (data["reauthenticationRequired"]) {
-            _refreshToken = "";
-            _authToken = "";
-            emit needsAuthorizationChanged();
+    if (r.status_code == 200 && !data.is_discarded() && data.contains("access_token")) {
+        _authToken = QString::fromStdString(data["access_token"].get<std::string>());
+        if (data.contains("refresh_token"))
+            _refreshToken = QString::fromStdString(data["refresh_token"].get<std::string>());
 
-            return false;
-        }
+        QSettings settings;
+        settings.setValue("authToken", _authToken);
+        settings.setValue("refreshToken", _refreshToken);
 
-        _authToken = QString::fromStdString(data["authToken"]);
         return true;
+    }
+
+    if (r.status_code == 400 || r.status_code == 401) {
+        _refreshToken = "";
+        _authToken = "";
+
+        QSettings settings;
+        settings.setValue("authToken", _authToken);
+        settings.setValue("refreshToken", _refreshToken);
+
+        emit needsAuthorizationChanged();
     }
 
     return false;

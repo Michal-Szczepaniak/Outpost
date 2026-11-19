@@ -5,12 +5,16 @@ Release:    1
 License:    LICENSE
 URL:        http://example.org/
 Source0:    %{name}-%{version}.tar.bz2
+Patch0:     qzing.patch
 Requires:   sailfishsilica-qt5 >= 0.10.9
 Requires:   openssl
+Requires:   sailfish-components-webview-qt5
 BuildRequires:  pkgconfig(sailfishapp) >= 1.0.2
 BuildRequires:  pkgconfig(Qt5Core)
 BuildRequires:  pkgconfig(Qt5Qml)
 BuildRequires:  pkgconfig(Qt5Quick)
+BuildRequires:  pkgconfig(Qt5Svg)
+BuildRequires:  pkgconfig(qt5embedwidget)
 BuildRequires:  desktop-file-utils
 BuildRequires:  cmake
 BuildRequires:  openssl-devel

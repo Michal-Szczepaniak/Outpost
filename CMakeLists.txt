@@ -1,15 +1,16 @@
 project(outpost CXX)
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.6)
 
 find_package (Qt5 COMPONENTS Core Network Qml Gui Quick REQUIRED)
 
 include(FindPkgConfig)
 pkg_search_module(SAILFISH sailfishapp REQUIRED)
+pkg_check_modules(QTMOZEMBED REQUIRED IMPORTED_TARGET qt5embedwidget)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 set(BUILD_SHARED_LIBS OFF)
@@ -40,6 +41,7 @@ target_link_libraries(outpost
     PRIVATE
     cpr::cpr
     nlohmann_json::nlohmann_json
+    PkgConfig::QTMOZEMBED
 )
 
 install(TARGETS outpost
@@ -77,8 +79,7 @@ add_custom_target(distfiles
         qml/cover/CoverPage.qml
         qml/pages/Main.qml
         qml/pages/About.qml
-        qml/pages/PhoneNumberDialog.qml
-        qml/pages/AuthorizationCodeDialog.qml
+        qml/pages/AuthorizationDialog.qml
         rpm/outpost.spec
         ${TsFiles})
 

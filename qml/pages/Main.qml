@@ -31,7 +31,7 @@ Page {
     onStatusChanged: {
         if (status === PageStatus.Active) {
             if (api.needsAuthorization) {
-                pageStack.replace(Qt.resolvedUrl("PhoneNumberDialog.qml"))
+                pageStack.replace(Qt.resolvedUrl("AuthorizationDialog.qml"))
             } else {
                 loadTimer.start();
             }
@@ -42,9 +42,11 @@ Page {
         target: api
 
         onRefresh: parcelList.load(listTypeSelect.currentIndex)
+
         onError: Notices.show(message, Notice.Short, Notice.Center)
+
         onNeedsAuthorizationChanged: {
-            pageStack.replace(Qt.resolvedUrl("PhoneNumberDialog.qml"))
+            pageStack.replace(Qt.resolvedUrl("AuthorizationDialog.qml"))
         }
     }
 

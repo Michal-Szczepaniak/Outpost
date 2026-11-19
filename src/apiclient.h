@@ -48,8 +48,8 @@ public:
 
     bool getNeedsAuthorization();
 
-    Q_INVOKABLE void sendNumber(QString number);
-    Q_INVOKABLE void sendCode(QString code);
+    Q_INVOKABLE QString authorizeUrl();
+    Q_INVOKABLE void handleCallback(QString callbackUrl);
     Q_INVOKABLE void logout();
     Q_INVOKABLE void track(QString number);
     Q_INVOKABLE void stopTracking(QString number);
@@ -57,22 +57,21 @@ public:
 
 private:
     nlohmann::json request(std::string url, std::string body, RequestType type, bool withAuth);
+    bool refreshToken();
+    static QByteArray randomUrlSafeString(int bytes);
 
 signals:
     void error(QString message);
-    void waitingForPhoneNumber();
-    void waitingForCode();
     void authorized();
     void needsAuthorizationChanged();
     void refresh();
 
 private:
-    bool refreshToken();
-
-private:
     QString _phoneNumber;
     QString _authToken;
     QString _refreshToken;
+    QByteArray _codeVerifier;
+    QByteArray _state;
 };
 
 #endif // APICLIENT_H

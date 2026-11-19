@@ -25,7 +25,9 @@ along with Yottagram. If not, see <http://www.gnu.org/licenses/>.
 
 namespace Endpoints {
 
-static const std::string SMS_SEND_CODE = "https://api-inmobile-pl.easypack24.net/v1/account";
+static const std::string AUTHORIZE_URL = "https://account.inpost-group.com/oauth2/authorize";
+static const std::string AUTHORIZE_REDIRECT = "https://account.inpost-group.com/callback";
+static const std::string OAUTH_TOKEN = "https://api-inmobile-pl.easypack24.net/global/oauth2/token";
 static const std::string SMS_CONFIRM_CODE = "https://api-inmobile-pl.easypack24.net/v1/account/verification";
 static const std::string REFRESH_TOKEN = "https://api-inmobile-pl.easypack24.net/v1/authenticate";
 static const std::string LOGOUT = "https://api-inmobile-pl.easypack24.net/v1/logout";
